@@ -21,7 +21,6 @@ public class main_MSW_test {
         int N= 4; //the number of players
 
         double[][] utility = new double[N][N]; //utility[i][j]
-        //List<Map<Double, Integer>> maps= new ArrayList<>();
 
         for(int i=0; i<N; i++)
         {
@@ -29,13 +28,10 @@ public class main_MSW_test {
             out.write(number_nei+ " ");
             for(int j=0; j<number_nei; j++)
             {
-                Map<Double, Integer> map= new HashMap<>();
                 Integer tmp= cin.nextInt();
                 tmp--;
                 out.write(tmp+" ");
                 utility[i][tmp]= (double) (number_nei-j)/number_nei; //we set utility to be normalized utility
-                //map.put(utility[i][tmp], tmp);
-                //maps.add(map);
             }
             out.write("\r\n");
         }
@@ -50,6 +46,8 @@ public class main_MSW_test {
             System.out.print(i + " " + teammate + "\r\n");
         }
 
+        double social_welfare= test_obj.getSW();
+        System.out.print("The average social welfare is " + social_welfare/N);
 
     }
 

@@ -1,58 +1,59 @@
-import ilog.concert.IloException;
-import ilog.concert.IloIntVar;
-import ilog.concert.IloMPModeler;
-import ilog.concert.IloRange;
+/**
+ * Created by loujian on 12/25/17.
+ * It is for the permutation IC program
+ */
+
+import ilog.concert.*;
 import ilog.cplex.IloCplex;
 import java.util.*;
 
-/**
- * Created by loujian on 11/18/17.
- * It is just for the test of maximizing social welfare. It is for the monotonic analysis
- */
-public class MSW_test {
+public class permutation_IC {
 
     int N;
     double[][] utility;
     IloCplex cplex;
     IloIntVar[][] var;
     IloRange[][] rng;
-    List<Map<Double, Integer>> maps;
+    IloNumVar epsilon;
     int[] teammates;
-    double social_welfare;
+    double object_value;
+    double e=0; //here e means the final epsilon value
+    double alpha; //here alpha means the tradeoff between social welfare and incentive
+    boolean[]flag;
 
-    MSW_test(int N, double[][] utility) {
-        this.N = N;
-
-        teammates = new int[N];
-        for (int i = 0; i < N; i++)
-            teammates[i] = i;
-
+    permutation_IC(int N, double[][] utility, boolean[]flag, double alpha)
+    {
+        this.N= N;
         this.utility = new double[N][N];
-        for (int i = 0; i < N; i++)
-            for (int j = 0; j < N; j++)
-                this.utility[i][j] = utility[i][j];
+        for(int i=0; i<N; i++)
+            for(int j=0; j<N; j++)
+                this.utility[i][j]=utility[i][j];
+        teammates= new int[N];
 
-        this.maps = maps;
+        this.alpha= alpha;
+        this.flag= flag;
 
         try {
             cplex = new IloCplex();
             var = new IloIntVar[1][];
-            rng = new IloRange[3][];
+            rng = new IloRange[4][]; //here we need to add the permutation IC constraints
+            epsilon= cplex.numVar(0, Double.MAX_VALUE);
 
         } catch (IloException e) {
             System.err.println("Concert exception caught: " + e);
         }
+
     }
 
     public double solve_problem() {
-        social_welfare=0;
+        object_value=0;
         try {
 
-            populateByRow(cplex, var, rng);
+            populateByRow(cplex, var, rng, epsilon);
 
             if (cplex.solve()) {
                 double[] x_value = cplex.getValues(var[0]);
-
+                e= cplex.getValue(epsilon);
                 for (int i = 0; i < N * N; i++) {
                     if (Math.abs(x_value[i] - 1.0) < 0.000001) {
                         teammates[i / N] = i % N;
@@ -60,7 +61,7 @@ public class MSW_test {
                     }
                 }
 
-                social_welfare = cplex.getObjValue();
+                object_value = cplex.getObjValue();
 
             }
 
@@ -74,7 +75,7 @@ public class MSW_test {
             System.err.println("Concert exception caught: " + e);
         }
 
-        return social_welfare;
+        return object_value;
     }
 
     int[] getTeammates()
@@ -84,15 +85,29 @@ public class MSW_test {
 
     double getSW() //get the social welfare of the system
     {
-        return social_welfare;
+        return (object_value+(N* e*alpha))/(1-alpha);
     }
 
-    void populateByRow(IloMPModeler model, IloIntVar[][]var, IloRange[][]rng)throws IloException
+    double getObject_value()
+    {
+        return object_value;
+    }
+
+    double getEpsilon()
+    {
+        return e;
+    }
+
+    void populateByRow(IloMPModeler model, IloIntVar[][]var, IloRange[][]rng, IloNumVar epsilon)throws IloException
     {
         double[] objvals= new double[N*N];
         for(int i=0; i<N; i++)
-            for(int j=0; j<N; j++)
-                objvals[i*N+j] = utility[i][j]; //here is the objective function
+            for(int j=0; j<N; j++) {
+                if (flag[i] == false || flag[j] == false)
+                    objvals[i * N + j] = 0;
+                else
+                    objvals[i * N + j] = utility[i][j];
+            }
 
         IloIntVar[] x= model.boolVarArray(N*N);
         var[0]=x;
@@ -100,9 +115,10 @@ public class MSW_test {
         rng[0]= new IloRange[N];
         rng[1]= new IloRange[N];
         rng[2]= new IloRange[N*N];
+        rng[3]= new IloRange[N*N];
 
         //we would like to maximize the social welfare
-        model.addMaximize(model.scalProd(x, objvals));
+        model.addMaximize(model.sum( model.prod(1-alpha, model.scalProd(x, objvals)), model.prod(N*alpha, model.negative(epsilon))));
 
         //add constraint: \sum_{j\in N} pi_{ij} \leq 1,  \forall i\in N
         for(int i=0; i<N; i++)
@@ -126,6 +142,20 @@ public class MSW_test {
         for(int i=0; i<N; i++)
             for(int j=0; j<N; j++)
                 rng[2][i*N+j]= model.addEq( model.sum(x[i*N+j], model.negative(x[j*N+i]) ), 0);
+
+        //add constraint: \sum_k x_{ik} u_{ik} \geq u_{ij}-\epsilon, \forall i, j\in N, j\in R_i
+        for(int i=0; i<N; i++)
+            for(int j=0; j<N; j++)
+            {
+                if(utility[i][j]<=0)
+                    continue;
+                double[] local_obj= new double[N*N];
+                for(int k=0; k<N; k++)
+                    local_obj[i*N+k] = utility[i][k];
+                cplex.addGe(cplex.sum(cplex.scalProd(x, local_obj), epsilon)  , objvals[i*N+j]);
+            }
     }
+
+
 
 }
