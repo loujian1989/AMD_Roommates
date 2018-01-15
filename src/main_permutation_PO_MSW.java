@@ -1,25 +1,26 @@
-/**
- * Created by loujian on 1/14/18.
- */
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.*;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Scanner;
 
-public class main_permutation_PO {
+/**
+ * Created by loujian on 1/14/18.
+ */
+public class main_permutation_PO_MSW {
 
     public static void main(String[] args)throws Exception {
 
-        Scanner cin = new Scanner(new File("SN_Scale_Free_n10m2.txt"));
-        File writename = new File("ICPO_SN_Scale_Free_n10m2_alpha020.txt");
+        Scanner cin = new Scanner(new File("SN_Scale_Free_n20m2.txt"));
+        File writename = new File("ICPOMSW_SN_Scale_Free_n20m2_alpha100.txt");
         writename.createNewFile();
         BufferedWriter out = new BufferedWriter(new FileWriter(writename));
 
         int num_cases = 100;
         int N = 10; //the number of players
-        double alpha = 0.20;
+        double alpha = 0.9999999999;
 
         double sw_sum=0;
         double epsilon_sum=0;
@@ -46,7 +47,7 @@ public class main_permutation_PO {
                 out.write("\r\n");
             }
 
-            permutation_IC ic_obj = new permutation_IC(N, utility, alpha);
+            permutation_PO_MSW ic_obj = new permutation_PO_MSW(N, utility, alpha, linked_value);
 
             ic_obj.solve_problem();
             int[] teammates = ic_obj.getTeammates();
@@ -62,50 +63,6 @@ public class main_permutation_PO {
 
             /*************************************************/
             //here it is the experiment for the epsilon
-            /*
-            double real_epsilon=0;
-
-            for(int idev=0; idev< num_deviate; idev++) {
-
-                //random get a player to deviate
-                int deviate_player = rd.nextInt(N);
-                double current_utility= utility[deviate_player][teammates[deviate_player]];
-                //store the current utility and linked_value
-                int tmp_length = utility[deviate_player].length;
-                double[] tmp_utility_deviate = new double[tmp_length];
-                for (int i = 0; i < tmp_length; i++)
-                    tmp_utility_deviate[i]= utility[deviate_player][i];
-                LinkedList<Integer> tmp_linked_value= new LinkedList<>(linked_value.get(deviate_player));
-                Collections.shuffle(tmp_linked_value); //shuffle the current order
-                int number_nei= tmp_linked_value.size();
-                for(int j=0; j< number_nei; j++)
-                {
-                    int tmp= tmp_linked_value.get(j);
-                    utility[deviate_player][tmp]= (double)(number_nei - j)/ number_nei;
-                }
-
-                double[][] para_utility = new double[N][N];
-                for(int i=0; i<N; i++)
-                    for(int j=0; j<N; j++)
-                        para_utility[i][j]= utility[i][j];
-                permutation_IC deviate_ic_obj= new permutation_IC(N, para_utility, alpha);
-
-                deviate_ic_obj.solve_problem();
-                int[] deviate_teammate= deviate_ic_obj.getTeammates();
-
-                double deviate_utility= tmp_utility_deviate[deviate_teammate[deviate_player]];
-
-                real_epsilon= Math.max(real_epsilon, deviate_utility- current_utility);
-
-                for(int i=0; i<tmp_length; i++)
-                    utility[deviate_player][i]= tmp_utility_deviate[i];
-
-
-            }
-            */
-
-            /*************************************************/
-            //here it is the experiment for the epsilon
 
             double real_epsilon=0;
 
@@ -115,6 +72,10 @@ public class main_permutation_PO {
                 double current_utility= utility[deviate_player][teammates[deviate_player]];
                 if(current_utility==1)
                     continue;
+
+                List<LinkedList<Integer>> new_linked_value= new ArrayList<>();
+                for(int i=0; i<linked_value.size(); i++)
+                    new_linked_value.add(new LinkedList<>(linked_value.get(i)));
 
                 double[][] new_utility= new double[N][N];
                 for(int i=0; i<N; i++) {
@@ -131,9 +92,13 @@ public class main_permutation_PO {
                     if(i==0)
                         continue;
                     Integer mate= linked_value.get(deviate_player).get(i);
+
                     LinkedList<Integer> tmp_linked_value= new LinkedList<>(linked_value.get(deviate_player));
                     tmp_linked_value.remove(mate);
                     tmp_linked_value.add(0, mate);
+                    new_linked_value.get(deviate_player).clear();
+                    new_linked_value.set(deviate_player, new LinkedList<>(tmp_linked_value));
+
 
                     for(int j=0; j<N; j++)
                         new_utility[deviate_player][j]=0;
@@ -144,7 +109,7 @@ public class main_permutation_PO {
                         new_utility[deviate_player][tmp]= (double)(number_nei - j)/ number_nei;
                     }
 
-                    permutation_IC deviate_ic_obj= new permutation_IC(N, new_utility, alpha);
+                    permutation_PO_MSW deviate_ic_obj= new permutation_PO_MSW(N, new_utility, alpha, new_linked_value);
 
                     deviate_ic_obj.solve_problem();
                     int[] deviate_teammate= deviate_ic_obj.getTeammates();
