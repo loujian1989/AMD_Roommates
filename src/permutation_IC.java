@@ -11,7 +11,7 @@ public class permutation_IC {
 
     int N;
     double[][] utility;
-    IloCplex cplex;
+    //IloCplex cplex;
     IloIntVar[][] var;
     IloRange[][] rng;
     IloNumVar epsilon;
@@ -31,14 +31,24 @@ public class permutation_IC {
 
         this.alpha= alpha;
 
-
     }
+
+
+    public void setUtility(double[][] payoff)
+    {
+        for(int i=0; i<N; i++)
+            for(int j=0; j<N; j++)
+            {
+                utility[i][j]= payoff[i][j];
+            }
+    }
+
 
     public double solve_problem() {
         object_value=0;
         try {
 
-            cplex = new IloCplex();
+            IloCplex cplex = new IloCplex();
             var = new IloIntVar[1][];
             rng = new IloRange[4][]; //here we need to add the permutation IC constraints
             epsilon= cplex.numVar(0, Double.MAX_VALUE);
@@ -57,12 +67,6 @@ public class permutation_IC {
                 object_value = cplex.getObjValue();
 
             }
-
-            cplex.exportModel("max_SW1.lp");
-
-            //Promotion(1, 2);
-
-            //cplex.end();
 
         } catch (IloException e) {
             System.err.println("Concert exception caught: " + e);
@@ -145,7 +149,6 @@ public class permutation_IC {
                 rng[3][i*N+j]= model.addGe(model.sum(model.scalProd(x, local_obj), epsilon)  , objvals[i*N+j]);
             }
     }
-
 
 
 }

@@ -13,7 +13,7 @@ public class permutation_PO_MSW {
 
     int N;
     double[][] utility;
-    IloCplex cplex;
+    //IloCplex cplex;
     IloIntVar[][] var;
     IloRange[][] rng;
     IloNumVar epsilon;
@@ -40,11 +40,21 @@ public class permutation_PO_MSW {
 
     }
 
+    public void setUtility(double[][] payoff)
+    {
+        for(int i=0; i<N; i++)
+            for(int j=0; j<N; j++)
+            {
+                utility[i][j]= payoff[i][j];
+            }
+    }
+
+
     public double solve_problem() {
         object_value=0;
         try {
 
-            cplex = new IloCplex();
+            IloCplex cplex = new IloCplex();
             var = new IloIntVar[1][];
             rng = new IloRange[4][]; //here we need to add the permutation IC constraints
             epsilon= cplex.numVar(0, Double.MAX_VALUE);
@@ -63,8 +73,6 @@ public class permutation_PO_MSW {
                 object_value = cplex.getObjValue();
 
             }
-
-            cplex.exportModel("max_SW1.lp");
 
             //Promotion(1, 2);
 
@@ -149,7 +157,7 @@ public class permutation_PO_MSW {
                 double[] local_obj= new double[N*N];
                 for(int k=0; k<N; k++)
                     local_obj[i*N+k] = utility[i][k];
-                cplex.addGe(cplex.sum(cplex.scalProd(x, local_obj), epsilon)  , objvals[i*N+j]);
+                model.addGe(model.sum(model.scalProd(x, local_obj), epsilon)  , objvals[i*N+j]);
             }
 
 
@@ -196,9 +204,10 @@ public class permutation_PO_MSW {
                     new_utility[deviate_player][tmp]= (double)(number_nei - j)/ number_nei;
                 }
 
-                max_SW deviate_MSW= new max_SW(N, new_utility);
-                deviate_MSW.solve_problem();
-                int[] deviate_teammates= deviate_MSW.getTeammates();
+                MSW.setUtility(new_utility);
+
+                MSW.solve_problem();
+                int[] deviate_teammates= MSW.getTeammates();
                 if(utility[deviate_player][deviate_teammates[deviate_player]] > utility[deviate_player][teammates[deviate_player]])
                 {
                     double[] local_obj= new double[N*N];

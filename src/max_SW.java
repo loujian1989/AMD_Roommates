@@ -11,7 +11,6 @@ public class max_SW {
 
     int N;
     double[][] utility;
-    IloCplex cplex;
     IloIntVar[][] var;
     IloRange[][] rng;
     int[] teammates;
@@ -26,21 +25,26 @@ public class max_SW {
                 this.utility[i][j]=utility[i][j];
         teammates= new int[N];
 
-        try {
-            cplex = new IloCplex();
-            var = new IloIntVar[1][];
-            rng = new IloRange[4][]; //here we need to add the permutation IC constraints
-
-
-        } catch (IloException e) {
-            System.err.println("Concert exception caught: " + e);
-        }
     }
+
+    public void setUtility(double[][] payoff)
+    {
+        for(int i=0; i<N; i++)
+            for(int j=0; j<N; j++)
+            {
+                utility[i][j]= payoff[i][j];
+            }
+    }
+
 
     public void solve_problem()
     {
         object_value=0;
         try{
+
+            IloCplex cplex = new IloCplex();
+            var = new IloIntVar[1][];
+            rng = new IloRange[4][]; //here we need to add the permutation IC constraints
 
             populateByRow(cplex, var, rng);
 
@@ -58,8 +62,6 @@ public class max_SW {
 
 
             }
-
-            cplex.exportModel("max_SW1.lp");
 
             //Promotion(1, 2);
 
