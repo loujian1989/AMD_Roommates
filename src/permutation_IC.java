@@ -11,10 +11,7 @@ public class permutation_IC {
 
     int N;
     double[][] utility;
-    //IloCplex cplex;
-    IloIntVar[][] var;
-    IloRange[][] rng;
-    IloNumVar epsilon;
+
     int[] teammates;
     double object_value;
     double e=0; //here e means the final epsilon value
@@ -49,6 +46,9 @@ public class permutation_IC {
         try {
 
             IloCplex cplex = new IloCplex();
+            IloIntVar[][] var;
+            IloRange[][] rng;
+            IloNumVar epsilon;
             var = new IloIntVar[1][];
             rng = new IloRange[4][]; //here we need to add the permutation IC constraints
             epsilon= cplex.numVar(0, Double.MAX_VALUE);
@@ -67,6 +67,8 @@ public class permutation_IC {
                 object_value = cplex.getObjValue();
 
             }
+
+            cplex.end();
 
         } catch (IloException e) {
             System.err.println("Concert exception caught: " + e);
@@ -138,6 +140,7 @@ public class permutation_IC {
                 rng[2][i*N+j]= model.addEq( model.sum(x[i*N+j], model.negative(x[j*N+i]) ), 0);
 
         //add constraint: \sum_k x_{ik} u_{ik} \geq u_{ij}-\epsilon, \forall i, j\in N, j\in R_i
+
         for(int i=0; i<N; i++)
             for(int j=0; j<N; j++)
             {
@@ -148,6 +151,7 @@ public class permutation_IC {
                     local_obj[i*N+k] = utility[i][k];
                 rng[3][i*N+j]= model.addGe(model.sum(model.scalProd(x, local_obj), epsilon)  , objvals[i*N+j]);
             }
+
     }
 
 

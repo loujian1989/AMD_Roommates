@@ -9,14 +9,13 @@ import ilog.concert.*;
 import ilog.cplex.IloCplex;
 import java.util.*;
 
-public class permutation_PO_MSW {
+public class permutation_PO_MSW extends Object {
 
     int N;
     double[][] utility;
     //IloCplex cplex;
-    IloIntVar[][] var;
-    IloRange[][] rng;
-    IloNumVar epsilon;
+
+
     int[] teammates;
     double object_value;
     double e=0; //here e means the final epsilon value
@@ -34,7 +33,9 @@ public class permutation_PO_MSW {
                 this.utility[i][j]=utility[i][j];
         teammates= new int[N];
 
-        this.linked_value= new ArrayList<>(linked_value);
+        this.linked_value= new ArrayList<>();
+        for(LinkedList<Integer> ls: linked_value)
+            this.linked_value.add(new LinkedList<>(ls));
 
         this.alpha= alpha;
 
@@ -55,9 +56,12 @@ public class permutation_PO_MSW {
         try {
 
             IloCplex cplex = new IloCplex();
+            IloIntVar[][] var;
+            IloRange[][] rng;
+            IloNumVar epsilon;
             var = new IloIntVar[1][];
             rng = new IloRange[4][]; //here we need to add the permutation IC constraints
-            epsilon= cplex.numVar(0, Double.MAX_VALUE);
+            epsilon= cplex.numVar( 0, Double.MAX_VALUE);
 
             populateByRow(cplex, var, rng, epsilon);
             if (cplex.solve()) {
@@ -74,9 +78,8 @@ public class permutation_PO_MSW {
 
             }
 
-            //Promotion(1, 2);
+            cplex.end();
 
-            //cplex.end();
 
         } catch (IloException e) {
             System.err.println("Concert exception caught: " + e);
@@ -148,19 +151,6 @@ public class permutation_PO_MSW {
             for(int j=0; j<N; j++)
                 rng[2][i*N+j]= model.addEq( model.sum(x[i*N+j], model.negative(x[j*N+i]) ), 0);
 
-        //add constraint: \sum_k x_{ik} u_{ik} \geq u_{ij}-\epsilon, \forall i, j\in N, j\in R_i
-        for(int i=0; i<N; i++)
-            for(int j=0; j<N; j++)
-            {
-                if(utility[i][j]<=0)
-                    continue;
-                double[] local_obj= new double[N*N];
-                for(int k=0; k<N; k++)
-                    local_obj[i*N+k] = utility[i][k];
-                model.addGe(model.sum(model.scalProd(x, local_obj), epsilon)  , objvals[i*N+j]);
-            }
-
-
 
         max_SW MSW= new max_SW(N, utility);
         MSW.solve_problem();
@@ -204,21 +194,29 @@ public class permutation_PO_MSW {
                     new_utility[deviate_player][tmp]= (double)(number_nei - j)/ number_nei;
                 }
 
-                MSW.setUtility(new_utility);
+                //MSW.setUtility(new_utility);
+                max_SW new_MSW= new max_SW(N, new_utility);
 
-                MSW.solve_problem();
-                int[] deviate_teammates= MSW.getTeammates();
-                if(utility[deviate_player][deviate_teammates[deviate_player]] > utility[deviate_player][teammates[deviate_player]])
+                new_MSW.solve_problem();
+                double deviate_SW= new_MSW.getSW();
+                //int[] deviate_teammates= MSW.getTeammates();
+                //if(utility[deviate_player][deviate_teammates[deviate_player]] > utility[deviate_player][teammates[deviate_player]])
+                if(deviate_SW - current_SW > 0.001)
                 {
                     double[] local_obj= new double[N*N];
                     for(int k=0; k<N; k++)
                         local_obj[deviate_player*N+k] = utility[deviate_player][k];
-                    rng[3][deviate_player*N + mate]= model.addGe(model.sum(model.scalProd(x, local_obj), epsilon)  , objvals[deviate_player*N + mate]);
+                    rng[3][deviate_player*N + mate]= model.addGe(model.sum(model.scalProd(x, local_obj), epsilon), objvals[deviate_player*N + mate]);
                 }
             }
 
         }
 
+    }
+
+    protected void finalize()throws java.lang.Throwable
+    {
+        super.finalize();
     }
 
 

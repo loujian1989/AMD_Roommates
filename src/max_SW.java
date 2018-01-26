@@ -11,8 +11,6 @@ public class max_SW {
 
     int N;
     double[][] utility;
-    IloIntVar[][] var;
-    IloRange[][] rng;
     int[] teammates;
     double object_value;
 
@@ -43,6 +41,8 @@ public class max_SW {
         try{
 
             IloCplex cplex = new IloCplex();
+            IloIntVar[][] var;
+            IloRange[][] rng;
             var = new IloIntVar[1][];
             rng = new IloRange[4][]; //here we need to add the permutation IC constraints
 
@@ -63,9 +63,7 @@ public class max_SW {
 
             }
 
-            //Promotion(1, 2);
-
-            //cplex.end();
+            cplex.end();
 
         } catch (IloException e) {
             System.err.println("Concert exception caught: " + e);

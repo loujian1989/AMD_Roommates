@@ -13,14 +13,14 @@ public class main_permutation_PO_MSW {
 
     public static void main(String[] args)throws Exception {
 
-        Scanner cin = new Scanner(new File("SN_Scale_Free_n20m2.txt"));
-        File writename = new File("test_out.txt");
+        Scanner cin = new Scanner(new File("SN_Scale_Free_n10m2.txt"));
+        File writename = new File("PO_MSW_n10m2_alpha040.txt");
         writename.createNewFile();
         BufferedWriter out = new BufferedWriter(new FileWriter(writename));
 
         int num_cases = 100;
-        int N = 20; //the number of players
-        double alpha = 0.00;
+        int N = 10; //the number of players
+        double alpha = 0.4;
 
         double sw_sum=0;
         double epsilon_sum=0;
@@ -76,10 +76,13 @@ public class main_permutation_PO_MSW {
 
         ic_obj.solve_problem();
         int[] teammates = ic_obj.getTeammates();
+
+        /*
         for (int i = 1; i <= N; i++) {
             int teammate = teammates[i - 1] + 1;
 
         }
+        */
 
         double social_welfare = ic_obj.getSW() / N;
         double epsilon = ic_obj.getEpsilon();
@@ -97,10 +100,6 @@ public class main_permutation_PO_MSW {
             if (current_utility == 1)
                 continue;
 
-            List<LinkedList<Integer>> new_linked_value = new ArrayList<>();
-            for (int i = 0; i < linked_value.size(); i++)
-                new_linked_value.add(new LinkedList<>(linked_value.get(i)));
-
             double[][] new_utility = new double[N][N];
             for (int i = 0; i < N; i++) {
                 if (i == deviate_player)
@@ -115,28 +114,33 @@ public class main_permutation_PO_MSW {
             {
                 if (i == 0)
                     continue;
-                Integer mate = linked_value.get(deviate_player).get(i);
 
-                LinkedList<Integer> tmp_linked_value = new LinkedList<>(linked_value.get(deviate_player));
+                Integer mate= linked_value.get(deviate_player).get(i);
+                if(utility[deviate_player][mate] <= current_utility)
+                    continue;
+
+                LinkedList<Integer> tmp_linked_value= new LinkedList<>(linked_value.get(deviate_player));
                 tmp_linked_value.remove(mate);
                 tmp_linked_value.add(0, mate);
-                new_linked_value.get(deviate_player).clear();
+
+                List<LinkedList<Integer>> new_linked_value= new ArrayList<>();
+                for(LinkedList<Integer> ls: linked_value)
+                    new_linked_value.add(new LinkedList<>(ls));
                 new_linked_value.set(deviate_player, new LinkedList<>(tmp_linked_value));
 
+                for(int j=0; j<N; j++)
+                    new_utility[deviate_player][j]=0;
 
-                for (int j = 0; j < N; j++)
-                    new_utility[deviate_player][j] = 0;
-
-                for (int j = 0; j < number_nei; j++) {
-                    int tmp = tmp_linked_value.get(j);
-                    new_utility[deviate_player][tmp] = (double) (number_nei - j) / number_nei;
+                for(int j=0; j< number_nei; j++)
+                {
+                    int tmp= tmp_linked_value.get(j);
+                    new_utility[deviate_player][tmp]= (double)(number_nei - j)/ number_nei;
                 }
 
+                permutation_PO_MSW new_ic_obj= new permutation_PO_MSW(N, new_utility, alpha, new_linked_value);
+                new_ic_obj.solve_problem();
 
-                ic_obj.setUtility(new_utility);
-
-                ic_obj.solve_problem();
-                int[] deviate_teammate = ic_obj.getTeammates();
+                int[] deviate_teammate = new_ic_obj.getTeammates();
 
                 double deviate_utility = utility[deviate_player][deviate_teammate[deviate_player]];
 
